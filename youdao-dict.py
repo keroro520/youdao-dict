@@ -29,15 +29,23 @@ def get_url(s):
 
 def output(data):
     if 'translation' in data:
-        print('traslation:')
+        print('Traslation:')
         for i in data['translation']:
             print('  '+i)
         print
     if 'basic' in data and 'explains' in data['basic']:
-        print('explains: ')
+        print('Explains: ')
         for i in data['basic']['explains']:
             print('  '+i)
         print
+    if 'web' in data:
+        for item in data['web']:
+            print(item['key']),
+            print(':'),
+            for i, v in enumerate(item['value']):
+                print(v),
+                print(';' if i != len(item['value'])-1 else ''),
+            print
 
 
 def lookup(s):
@@ -51,7 +59,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         for i, s in enumerate(sys.argv[1:]):
             lookup(s)
-            if i != len(sys.argv)-1:
+            if i != len(sys.argv)-2:
                 print('-------------------------')
     else:
         while True:
