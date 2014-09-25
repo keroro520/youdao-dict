@@ -1,12 +1,15 @@
-# !/bin/python2
+#!/bin/python2
 # -*- coding: utf-8 -*-
+
 '''
 基于有道Web端的在线命令行词典
 因为有道Web端相对API的释义比较丰富，所以这里用爬虫的方法来抓取释义..
 '''
+
 import urllib2
 import re
 import sys
+from subprocess import Popen, PIPE
 from bs4 import BeautifulSoup
 
 
@@ -54,6 +57,9 @@ def output(data):
 
 
 def lookup(s):
+    p1 = Popen(['echo', s], stdout=PIPE)
+    p2 = Popen(['/usr/bin/sticky.py'], stdin=p1.stdout, stdout=PIPE)
+    p2.communicate()[0]
     data = urllib2.urlopen(get_url(s)).read().decode('utf-8')
     soup = BeautifulSoup(data)
 
