@@ -1,6 +1,5 @@
 #!/bin/python2
 # -*- coding: utf-8 -*-
-
 '''
 基于有道Web端的在线命令行词典
 因为有道Web端相对API的释义比较丰富，所以这里用爬虫的方法来抓取释义..
@@ -35,7 +34,7 @@ def get_url(s):
     return url+s[1:-1]
 
 
-def output(data):
+def output_from_api(data):
     if 'translation' in data:
         print('Traslation:')
         for i in data['translation']:
@@ -57,9 +56,10 @@ def output(data):
 
 
 def lookup(s):
-    p1 = Popen(['echo', s], stdout=PIPE)
+    p1 = Popen(['echo', 'FROM youdao dict', s], stdout=PIPE)
     p2 = Popen(['/usr/bin/sticky.py'], stdin=p1.stdout, stdout=PIPE)
     p2.communicate()[0]
+
     data = urllib2.urlopen(get_url(s)).read().decode('utf-8')
     soup = BeautifulSoup(data)
 
@@ -72,20 +72,27 @@ def lookup(s):
 
     content = \
         soup.find('div', {'class': 'results-content', 'id': 'results-contents'})
-    definitions = \
-        content.find('div', {'class': 'trans-container'}).ul.find_all('li')
-    if not definitions:
+
+    try:
         definitions = \
-            content.find('div', {'class': 'trans-container'}).ul.find_all('span')
+            content.find('div', {'class': 'trans-container'}).ul.find_all('li')
+        if not definitions:
+            definitions = \
+                content.find('div', {'class': 'trans-container'}).ul.find_all('span')
+    except:
+        definitions = error_typo(soup)
     additional = content.find('p', {'class': 'additional'})
 
     if definitions:
         for define in definitions:
-            text = define.text.strip()
+            text = define.text
+            text = text.strip().replace('\n', '')
+            text = re.sub(r'\s+', ' ', text)
             if text:
-                print(define.text.replace('\n', '')),
-                if text[-1] != '.':
+                if text[-1] == '.':
                     print
+                if text != ';':
+                    print(text),
         if additional:
             text = additional.text.strip()
             text = re.sub(r'\s+', ' ', text)
@@ -93,8 +100,12 @@ def lookup(s):
                 print(text)
         print
 
-    word_groups = content.find('div', {'class': 'pr-container more-collapse'})
-    word_groups = word_groups.find_all('p', {'class': r'wordGroup'})
+    try:
+        word_groups = content.find('div', {'class': 'pr-container more-collapse'})
+        word_groups = word_groups.find_all('p', {'class': r'wordGroup'})
+    except:
+        word_groups = list()
+
     if word_groups:
         print(u'[短语]')
         for group in word_groups:
@@ -109,17 +120,46 @@ def lookup(s):
                 print(t.strip()+(';' if i != len(text)-2 else '')),
             print
 
+    sentences = soup.find('div', {'id': 'bilingual'})
+
+
+def fanyi_toggle(soup):
+    trans = soup.find('div', {'id': 'fanyiToggle'}).find_all('p')
+    return trans[:2]
+
+
+def error_typo(soup):
+    try:
+        typos = soup.find('div', {'class': 'error-typo'})
+        typos = [typo for typo in typos.find_all('p')]
+    except:
+        return fanyi_toggle(soup)
+
+    print('你要找的是不是:')
+    for typo in typos:
+        text = typo.text
+        text = re.sub('\s+', ' ', text)
+
+    return typos
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         for i, s in enumerate(sys.argv[1:]):
-            lookup(s)
+            try:
+                lookup(s)
+            except:
+                print('抱歉，没有找到与您查询的"%s"相符的字词。' % s)
             if i != len(sys.argv)-2:
                 print('-------------------------')
     else:
         while True:
             s = raw_input()
-            if s.strip():
-                lookup(s.strip())
+            s = s.strip()
+            if s:
+                try:
+                    lookup(s)
+                except:
+                    print('抱歉，没有找到与您查询的"%s"相符的字词。' % s)
             if s == '':
                 break
